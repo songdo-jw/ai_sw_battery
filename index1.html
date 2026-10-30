@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="셀 간격·채움재·냉각·SOC·배터리 종류에 따른 배터리팩 열폭주 확산을 2D 열전도 모델로 계산하고, 유전 알고리즘으로 최적 배치를 찾는 시뮬레이터">
+<meta name="description" content="배터리팩 열폭주 확산 시뮬레이터: 셀 간격·채움재·냉각·SOC·배터리 종류 비교, 유전 알고리즘 최적 배치, 간격과 성능, 단열재와 충전량 추가 탐구">
 <title>열폭주 확산 시뮬레이터</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
@@ -51,6 +51,10 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
 .stages i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
 .concl{margin:0;padding:12px 14px;border-left:3px solid var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent);border-radius:0 6px 6px 0;max-width:75ch}
 #pchart svg{width:100%;height:auto;display:block}
+.smap{display:grid;grid-template-columns:auto repeat(7,minmax(0,1fr));gap:2px;font-variant-numeric:tabular-nums;font-size:.78rem;max-width:640px}
+.smap div{padding:6px 2px;text-align:center;border-radius:3px}
+.smap .h{color:var(--muted);background:none}
+.smap .ok{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
 .hint{font-size:.85rem;color:var(--muted);margin:0}
 .exp{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:12px}
 .exp h2{margin:0;font-size:1.1rem}
@@ -157,6 +161,31 @@ footer{font-size:.82rem;color:var(--muted);max-width:75ch}
       <tbody id="ptb"><tr><td colspan="8" class="hint">성능 분석 실행을 누르면 간격 0~6 mm의 안전과 성능을 함께 비교합니다.</td></tr></tbody>
     </table></div>
     <p class="hint">계산 가정: 셀 지름 21 mm(21700 원통형) 기준으로 같은 공간에 넣을 수 있는 셀 수의 비율을 에너지 밀도로 봅니다. 간격 0 mm일 때 주행거리 400 km로 가정합니다. 평상시 온도는 모든 셀이 급속충전 수준으로 약하게 발열하는 상태를 일정 시간 계산한 값입니다. 노화 속도는 "온도가 10°C 오르면 노화가 약 2배 빨라진다"는 경험 법칙으로 0 mm 대비 상대값을 냅니다. 전기 손실은 연결판(버스바)이 전체 저항의 10%를 차지하고 길이에 비례한다고 가정합니다.</p>
+  </section>
+
+  <section class="exp" id="extra">
+    <h2>추가 탐구 ① 단열재는 열을 막을까, 가둘까?</h2>
+    <p class="hint">AI 비교에서 전부 단열재로 채운 설계도 평균 16개 넘는 셀이 폭주했습니다. 단열재가 열의 이동을 막는 동시에 불난 셀 안에 열을 가두는 것은 아닌지 확인합니다. 현재 셀 간격(최소 1 mm)·SOC·배터리 종류에서 공기 / 단열재 / 단열재 + 아래 냉각판을 1,200초 동안 비교합니다.</p>
+    <div class="btns"><button id="irun" class="pri">단열재 실험 실행</button><span id="iprog" class="hint" aria-live="polite"></span></div>
+    <div id="ichart"></div>
+    <div class="tbl"><table>
+      <thead><tr><th>조건</th><th>2차 폭주까지</th><th>최종 폭주 셀</th><th>불난 셀 최고 온도</th><th>1,200초 뒤 남은 열</th></tr></thead>
+      <tbody id="itb"><tr><td colspan="5" class="hint">단열재 실험 실행을 누르면 세 조건을 비교합니다.</td></tr></tbody>
+    </table></div>
+    <p id="iconc" class="concl" hidden></p>
+  </section>
+
+  <section class="exp" id="socmap">
+    <h2>추가 탐구 ② "80%까지만 충전"은 의미가 있을까?</h2>
+    <p class="hint">충전량(SOC 30~100%)과 셀 간격(0~6 mm)을 모두 바꿔 가며 확산 여부를 지도로 그립니다. 이어서 "충전량을 제한하는 대신 셀을 촘촘히 넣는 설계"가 실제로 쓸 수 있는 주행거리를 늘리는지 계산합니다. 현재 채움재·배터리 종류를 씁니다. 56번 계산하므로 30초~1분 걸립니다.</p>
+    <div class="btns"><button id="srun" class="pri">충전량 지도 그리기</button><span id="sprog" class="hint" aria-live="polite"></span></div>
+    <div id="smap"></div>
+    <div class="tbl"><table>
+      <thead><tr><th>충전 상한</th><th>확산을 막는 최소 간격</th><th>에너지 밀도</th><th>실제로 쓸 수 있는 주행거리</th></tr></thead>
+      <tbody id="stb"><tr><td colspan="4" class="hint">지도를 그리면 충전 상한별 설계 비교가 여기에 나옵니다.</td></tr></tbody>
+    </table></div>
+    <p id="sconc" class="concl" hidden></p>
+    <p class="hint">주의: 충전량에 따른 발열 세기는 "SOC 50% 이하에서는 열폭주가 거의 없다"는 문헌 내용을 바탕으로 가정한 값이라, 확산이 시작되는 충전량은 그 가정에 크게 좌우됩니다. 주행거리는 간격 0 mm·100% 충전일 때 400 km를 기준으로 에너지 밀도 × 충전 상한으로 계산합니다.</p>
   </section>
 
   <footer>단순화 모델: 2D 격자 열전도(유한차분법) + 임계 온도(NCM 150°C, LFP 200°C)를 넘으면 일정 시간 발열하는 열폭주 규칙. 물성값은 상대값이라 절대 수치보다 설계 간 비교에 의미가 있습니다. 가스 분출·화염·3D 구조는 반영하지 않았습니다. SOC·배터리 종류·반응 단계 온도·조기 경보 개념은 아래 논문을 참고했고, 반영 방식은 단순화한 가정입니다.<br>참고: Larsson 외(2016, JES) · 김우영·김남진(2021, 한국지열·수열에너지학회지) · Olona & Castejón(2023, Batteries) · Tran 외(2022, Processes) · Liu 외(2024, JES)</footer>
@@ -345,6 +374,57 @@ $('prun').onclick=async()=>{
   $('pconc').textContent=safe?`이 조건에서 확산을 막는 최소 간격은 ${safe.g} mm입니다. 이때 에너지 밀도는 ${safe.dens.toFixed(0)}%로 떨어져, 같은 공간 기준 주행거리가 약 ${(400-safe.range).toFixed(0)} km 줄어듭니다. 안전을 얻는 대신 성능을 내주는 트레이드오프가 생깁니다.`
     :`이 조건에서는 6 mm까지 넓혀도 확산을 막지 못합니다. 간격만으로는 한계가 있으니 단열재·냉각판 같은 다른 방법과 함께 써야 합니다.`;
   $('pprog').textContent='완료';$('prun').disabled=false;
+};
+
+// ===== 추가 탐구 ①: 단열재는 막을까, 가둘까 =====
+function cellT(s,c){let a=0;for(let i=0;i<s.N;i++)if(s.id[i]===c)a+=s.T[i];return a/s.cnt[c];}
+function packHeat(s){let e=0;for(let i=0;i<s.N;i++)e+=s.T[i]-25;return e/s.N;}
+function lineSVG(series,xmax,ylab,mark){
+  const W=640,H=230,L=52,Rt=16,T=26,B=34,pw=W-L-Rt,ph=H-T-B;
+  const ymax=Math.max(...series.flatMap(s=>s.y))*1.08,x=v=>L+v/xmax*pw,y=v=>T+ph-v/ymax*ph;
+  const step=ymax>1000?400:ymax>400?200:100;let g='';
+  for(let v=0;v<=ymax;v+=step)g+=`<line x1="${L}" x2="${L+pw}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)">${v}</text>`;
+  for(let v=0;v<=xmax;v+=200)g+=`<text x="${x(v)}" y="${T+ph+16}" text-anchor="middle" font-size="11" fill="var(--muted)">${v}s</text>`;
+  series.forEach((s,k)=>{g+=`<polyline fill="none" stroke="${s.c}" stroke-width="2" ${s.dash?'stroke-dasharray="6 4"':''} points="${s.x.map((v,i)=>x(v)+','+y(s.y[i])).join(' ')}"/>`;
+    g+=`<text x="${L+8+k*170}" y="14" font-size="11" fill="${s.c}">● ${s.name}</text>`;});
+  g+=`<text x="12" y="${T+ph/2}" font-size="11" fill="var(--muted)" transform="rotate(-90 12 ${T+ph/2})" text-anchor="middle">${ylab}</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${ylab}">${g}</svg>`;
+}
+$('irun').onclick=async()=>{
+  $('irun').disabled=true;const gap=Math.max(1,+$('gap').value),base={...opts(),vg:null,hg:null,gap};
+  const conds=[['공기','air',false,'var(--cool)'],['단열재','ins',false,'#b08900'],['단열재 + 아래 냉각판','ins',true,'var(--ok)']],res=[];
+  for(const[nm,fill,bottom,c]of conds){
+    $('iprog').textContent=`${nm} 계산 중… (간격 ${gap} mm)`;await new Promise(r=>setTimeout(r,20));
+    const s=makeSim({...base,fill,bottom});trigger(s,1*COLS+2);const xs=[],tc=[],he=[];let pk=0,nx=0;
+    while(s.t<1200){step(s);if(s.t>=nx){nx+=10;const t=cellT(s,1*COLS+2);xs.push(s.t);tc.push(t);he.push(packHeat(s));if(t>pk)pk=t;}}
+    res.push({nm,c,dash:bottom,xs,tc,he,pk,n:nRun(s),sec:s.second,end:he[he.length-1]});
+  }
+  $('ichart').innerHTML=lineSVG(res.map(r=>({name:r.nm,c:r.c,dash:r.dash,x:r.xs,y:r.tc})),1200,'처음 폭주한 셀 온도 (°C)')+lineSVG(res.map(r=>({name:r.nm,c:r.c,dash:r.dash,x:r.xs,y:r.he})),1200,'팩에 남은 열 (평균 온도 상승, °C)');
+  const a=res[0];
+  $('itb').innerHTML=res.map(r=>`<tr><td>${r.nm}</td><td class="m">${r.sec<0?'번지지 않음':r.sec.toFixed(0)+' s'}</td><td class="m">${r.n} / 24</td><td class="m">${Math.round(r.pk)}°C</td><td class="m">${r.end.toFixed(0)} (공기의 ×${(r.end/a.end).toFixed(1)})</td></tr>`).join('');
+  const b=res[1],c=res[2];$('iconc').hidden=false;
+  $('iconc').textContent=`단열재는 2차 폭주를 ${a.sec<0?'—':a.sec.toFixed(0)+'초'}에서 ${b.sec<0?'차단':b.sec.toFixed(0)+'초'}로 늦췄지만, 불난 셀의 최고 온도는 ${Math.round(a.pk)}°C에서 ${Math.round(b.pk)}°C로 올라갔고 1,200초 뒤 팩에 남은 열도 공기의 ${(b.end/a.end).toFixed(1)}배였습니다. 열을 막는 동시에 가두는 것입니다. 열이 빠져나갈 냉각판을 함께 두면 최종 폭주 셀이 ${b.n}개에서 ${c.n}개로 줄었습니다.`;
+  $('iprog').textContent='완료';$('irun').disabled=false;
+};
+
+// ===== 추가 탐구 ②: 충전량 × 간격 지도 =====
+$('srun').onclick=async()=>{
+  $('srun').disabled=true;const base={...opts(),vg:null,hg:null},socs=[100,90,80,70,60,50,40,30],M={};
+  let html='<div class="smap"><div class="h">SOC \\ 간격</div>'+[0,1,2,3,4,5,6].map(g=>`<div class="h">${g} mm</div>`).join('');
+  for(const soc of socs){M[soc]=[];
+    for(let g=0;g<=6;g++){
+      $('sprog').textContent=`SOC ${soc}% · ${g} mm 계산 중…`;await new Promise(r=>setTimeout(r,0));
+      setParams(soc,$('chem').value);const s=makeSim({...base,gap:g});trigger(s,1*COLS+2);while(s.t<700&&nRun(s)<s.nc)step(s);M[soc].push(s.second);
+    }}
+  setParams(+$('soc').value,$('chem').value);
+  for(const soc of socs){html+=`<div class="h">${soc}%</div>`+M[soc].map(v=>v<0?'<div class="ok">차단</div>':`<div style="background:color-mix(in srgb,var(--accent) ${Math.round(100-Math.min(70,(v-30)*0.6))}%,transparent);color:#fff">${v.toFixed(0)}s</div>`).join('');}
+  $('smap').innerHTML=html+'</div>';
+  const rows=[100,90,80,70,60].map(soc=>{const g=M[soc].findIndex(v=>v<0);const dens=g<0?null:(21/(21+g))**2;return{soc,g,dens,range:dens==null?null:400*dens*soc/100};});
+  $('stb').innerHTML=rows.map(r=>`<tr><td class="m">${r.soc}%</td><td class="m">${r.g<0?'6 mm 넘음':r.g+' mm'}</td><td class="m">${r.dens==null?'—':(r.dens*100).toFixed(0)+'%'}</td><td class="m">${r.range==null?'—':r.range.toFixed(0)+' km'}</td></tr>`).join('');
+  const ok=rows.filter(r=>r.range!=null);
+  if(ok.length){const best=ok.reduce((a,b)=>b.range>a.range?b:a);$('sconc').hidden=false;
+    $('sconc').textContent=`충전 상한을 낮출수록 확산을 막는 간격은 줄어들지만, 쓸 수 있는 주행거리는 ${best.soc}% 충전·${best.g} mm 설계가 ${best.range.toFixed(0)} km로 가장 길었습니다. 충전 제한을 전제로 셀을 촘촘히 넣어도 주행거리 이득은 없습니다. 대신 이미 만들어진 팩에서는 충전 상한을 낮추는 것만으로 안전 범위 안에 머물 수 있습니다. "80% 충전"은 설계를 대신하는 방법이 아니라 안전 여유를 늘리는 습관이라고 볼 수 있습니다.`;}
+  $('sprog').textContent='완료';$('srun').disabled=false;
 };
 reset();
 </script>
